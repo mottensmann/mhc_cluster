@@ -1,3 +1,5 @@
+`Forked from nextgenusfs/mhc_cluster`
+
 ###USEARCH MHC Clustering Script:###
 
 ___
@@ -35,7 +37,7 @@ From the Ion Torrent Server, analyze the data using the `--disable-all-filters` 
 
 `mhc-process_reads.py --barcodes 1,5,24 --rev_comp data.fastq > data.demux.fq`
 
-This will find Ion barcodes (1, 5, and 24) and relabel header with that information (barcodelabel=BC_5;). By default,     it will look for all 96 Ion Xpress barcodes, specifiy the barcodes you used by a comma separated list. Next the script will find and trim both the forward and reverse primers (default is MHC_DRB region: drbF & drbR). This will then save to STDOUT only the sequences that have a valid barcode sequence and contain both forward/reverse primers, and finally it will reverse-complement the sequence so it is in the proper orientation for the next step (if you used the drbF/drbR primers).  These options can be customized using: `--fwd_primer`, `--rev_primer`, etc. Type `-h` for all the available options.
+This will find Ion barcodes (1, 5, and 24) and relabel header with that information (barcodelabel=BC_5;). By default, it will look for all 96 Ion Xpress barcodes, specifiy the barcodes you used by a comma separated list. Next the script will find and trim both the forward and reverse primers (default is MHC_DRB region: drbF & drbR). This will then save to STDOUT only the sequences that have a valid barcode sequence and contain both forward/reverse primers, and finally it will reverse-complement the sequence so it is in the proper orientation for the next step (if you used the drbF/drbR primers).  These options can be customized using: `--fwd_primer`, `--rev_primer`, etc. Type `-h` for all the available options.
 
 ####Clustering your data into OTUs:####
 
