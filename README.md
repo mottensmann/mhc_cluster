@@ -12,13 +12,23 @@ The subfolder `lib` contains required functions and may contain hidden marko mod
 *This repository was forked from https://github.com/nextgenusfs/mhc_cluster.git` and subsequently modified. See details there.*
 
 
-**Dependent software**
+**Dependent software and installation**
 
-* python,
-* biopython
 * USEARCH8 (http://www.drive5.com/usearch)
 * VSEARCH (https://github.com/torognes/vsearch)
-* HMMER3 v3.1b2
+```
+wget https://github.com/torognes/vsearch/releases/download/v2.4.4/vsearch-2.4.4-linux-x86_64.tar.gz
+tar xzf vsearch-2.4.4-linux-x86_64.tar.gz
+```
 
+* HMMER3 v3.1b2 (hmmer.org)
+Compiling from source
+```
+tar zxf hmmer-3.1b2.tar.gz
+cd hmmer-3.1b2
+./configure
+make
+make check
+```
 
 

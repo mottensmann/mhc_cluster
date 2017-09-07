@@ -120,15 +120,20 @@ $(document).ready(function () {
 
 
 <p><strong>Clustering Illumina MiSeq paired-end reads of MHC sequences</strong></p>
-<hr />
+<p>Clustering of paired-end reads is conducted using the script <code>mhc_clustering.py</code>.</p>
+<pre><code>mhc_clustering.py -h</code></pre>
+<p>The subfolder <code>lib</code> contains required functions and may contain hidden marko models created from multiple sequence alignment of published mhc alleles using <strong>HMMER3</strong>.</p>
 <p><em>This repository was forked from <a href="https://github.com/nextgenusfs/mhc_cluster.git" class="uri">https://github.com/nextgenusfs/mhc_cluster.git</a>` and subsequently modified. See details there.</em></p>
-<p><strong>Dependent software</strong></p>
+<p><strong>Dependent software and installation</strong></p>
 <ul>
-<li>python,</li>
-<li>biopython</li>
 <li>USEARCH8 (<a href="http://www.drive5.com/usearch" class="uri">http://www.drive5.com/usearch</a>)</li>
 <li>VSEARCH (<a href="https://github.com/torognes/vsearch" class="uri">https://github.com/torognes/vsearch</a>)</li>
-<li>HMMER3 v3.1b2</li>
+<li><p>HMMER3 v3.1b2 (hmmer.org) Compiling from source</p>
+<pre><code>% tar zxf hmmer-3.1b2.tar.gz
+% cd hmmer-3.1b2
+% ./configure
+% make
+% make check</code></pre></li>
 </ul>
 
 
