@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
-# This pipeline conducts a preliminary filtering of sequences based on quality, then filters for target sequences
-# in comparison to hidden markov models of a query (i.e. MHC Locus reference) and finally clusters using USEARCH8.
+# Clustering Illumina MiSeq reads of MHC sequences into 'OTUs'
+#
+# This phyton scripts is used for preliminary filtering of sequences based on quality, then filters for target sequences
+# in comparison to hidden markov models of a query (i.e. MHC Locus reference) and finally clusters into distinct alleles.
 #
 # Perequisites are:
-# 	A hidden markov model needs to be constructed based on a multiple sequence alignment and stored in the 
+# 	A hidden markov model may be constructed based on a multiple sequence alignment and stored in the 
 # 	subfolder 'lib'.
 #	Example using MUSCLE and HMMER3:
 #	Align sequences
@@ -14,9 +16,12 @@
 #	Create help files
 #	hmmpress <hmmbuild output>
 #
-# Adapted from Palmer et al (2016). PeerJ PrePrints 4 (2016): e1662v1
+# Modified based on the script mhc-OTU_cluster.py from Palmer et al (2016). PeerJ PrePrints 4 (2016): e1662v1
 # https://github.com/nextgenusfs/mhc_cluster
 # 
+# Changes include:
+# - substitute usearch parts by vsearch
+#
 # Meinolf Ottensmann, 31.08.2017
 
 import os, argparse, subprocess, inspect, re, multiprocessing, warnings, itertools
@@ -33,20 +38,22 @@ class MyFormatter(argparse.ArgumentDefaultsHelpFormatter):
     def __init__(self,prog):
         super(MyFormatter,self).__init__(prog,max_help_position=50)
 
-parser=argparse.ArgumentParser(prog='mhc-OTU_cluster.py', usage="%(prog)s [options] -f file.demux.fq\n%(prog)s -h for help menu",
+parser=argparse.ArgumentParser(prog='mhc_clustering.py', usage="%(prog)s [options] -f file.demux.fq\n%(prog)s -h for help menu",
     description='''Script processes mhc sequences.  This script runs quality filtering on the reads, filters the reads for contaminations using hidden markov models,
-	and then clusters into OTUs using USEARCH8 (http://drive5.com/usearch) and HMMER3 (http://hmmer.janelia.org)''',
-    epilog="""Adapted from a script by Jon Palmer (2015) https://github.com/nextgenusfs/mhc_cluster""",
+	and then clusters into OTUs''',
+    epilog="""Meinolf Ottensmann (2017) https://github.com/mottensmann/mhc_cluster""",
     formatter_class=MyFormatter)
 
 parser.add_argument('-f','--fastq', dest="FASTQ", required=True, help='FASTQ file')
 parser.add_argument('-o','--out', default='out', help='Base output name')
 parser.add_argument('-e','--maxee', default='1.0', help='Quality trim EE value')
+parser.add_argument('-t','--truncqual', default='3', help='Quality trim Q value')
 parser.add_argument('-l','--length', default='auto', help='Trim Length')
 parser.add_argument('-p','--pct_otu', default=99, help="OTU Clustering Percent")
 parser.add_argument('-n','--num_diff', default='False', help="OTU Clustering Number of differences")
 parser.add_argument('-m','--minsize', default='2', help='Min abundance to keep for clustering')
 parser.add_argument('-u','--usearch', dest="usearch", default='usearch8', help='USEARCH8 EXE')
+parser.add_argument('-v','--vsearch', dest="vsearch", default='vsearch', help='VSEARCH')
 parser.add_argument('--translate', action='store_true', help='Translate OTUs')
 args=parser.parse_args()
 
@@ -67,8 +74,8 @@ def countfastq(input):
     count = int(lines) / 4
     return count
 
-# Find cpus, use 1 less than total
-cpus = multiprocessing.cpu_count() - 1
+# Find cpus, use them all; previously -1
+cpus = multiprocessing.cpu_count()
 cpus = str(cpus)
 
 # Open log file for usearch8 stderr redirect
@@ -78,6 +85,7 @@ if os.path.isfile(log_name):
 log_file = open(log_name, 'ab')
 
 usearch = args.usearch
+vsearch = args.vsearch
 try:
     subprocess.call([usearch, '--version'], stdout = log_file, stderr = log_file)
 except OSError:
@@ -90,10 +98,10 @@ if args.num_diff != 'False':
 # Count input reads
 print '\nLoading records: ' + '{0:,}'.format(countfastq(args.FASTQ)) + ' reads'
     
-# Run usearch8 fastq filtering step, output to fasta
+# Run vsearch fastq filtering step, output to fasta
 filter_out = args.out + '.EE' + args.maxee + '.filter.fa'
-print "\nCMD: Quality Filtering\n%s -fastq_filter %s -fastq_maxee %s -fastq_qmax 45 -fastaout %s" % (usearch, args.FASTQ, args.maxee, filter_out)
-subprocess.call([usearch, '-fastq_filter', args.FASTQ, '-fastq_maxee', args.maxee, '-fastq_qmax', '45', '-fastaout', filter_out], stdout = log_file, stderr = log_file)
+print "\nCMD: Quality Filtering\n%s -fastq_filter %s -fastq_truncqual %s -fastaout %s" % (vsearch, args.FASTQ, args.truncqual, filter_out)
+subprocess.call([vsearch, '-fastq_filter', args.FASTQ, '-fastq_truncqual', args.truncqual, '-fastaout', filter_out], stdout = log_file, stderr = log_file)
 print "Output: " + '{0:,}'.format(countfasta(filter_out)) + ' reads\n'
 
 # Run HMMer3 to filter contaminant sequences out.
@@ -259,8 +267,8 @@ if args.translate:
     print "%10u total proteins" % total_count
     print "%10u unique proteins" % unique_count
     
-# output reads per Barcode for original, filtered, and hmm passed files
-# now loop through data and find barcoded samples, counting each.....
+#output reads per Barcode for original, filtered, and hmm passed files
+#now loop through data and find barcoded samples, counting each.....
 BarcodeCountA = {}
 with open(args.FASTQ, 'rU') as input:
     header = itertools.islice(input, 0, None, 4)

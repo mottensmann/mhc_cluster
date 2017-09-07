@@ -13,7 +13,7 @@ if len(sys.argv)<2:
 FileName = sys.argv[1]
 
 def GetSampleId(Label):
-	Fields = Label.split(";")
+	Fields = Label.split(":") #;
 	for Field in Fields:
 		if Field.startswith("barcodelabel="):
 			return Field[13:]
