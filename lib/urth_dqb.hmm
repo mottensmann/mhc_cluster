@@ -1,5 +1,5 @@
 HMMER3/f [3.1b1 | May 2013]
-NAME  dqb_hmm
+NAME  urth_dqb
 LENG  270
 MAXL  417
 ALPH  DNA
@@ -8,7 +8,7 @@ MM    no
 CONS  yes
 CS    no
 MAP   yes
-DATE  Mon Aug 28 12:29:25 2017
+DATE  Fri Sep  8 11:32:47 2017
 NSEQ  21
 EFFN  1.274048
 CKSUM 3726883615

@@ -53,7 +53,9 @@ parser.add_argument('-p','--pct_otu', default=99, help="OTU Clustering Percent")
 parser.add_argument('-n','--num_diff', default='False', help="OTU Clustering Number of differences")
 parser.add_argument('-m','--minsize', default='2', help='Min abundance to keep for clustering')
 parser.add_argument('-u','--usearch', dest="usearch", default='usearch8', help='USEARCH8 EXE')
+parser.add_argument('-h','--hmm', dest="hmm", default='urth_dqb.hmm', help='Hidden markov model reference')
 parser.add_argument('-v','--vsearch', dest="vsearch", default='vsearch', help='VSEARCH')
+parser.add_argument('-c','--cpus', default=4, help='Number of cpus')
 parser.add_argument('--translate', action='store_true', help='Translate OTUs')
 args=parser.parse_args()
 
@@ -74,8 +76,8 @@ def countfastq(input):
     count = int(lines) / 4
     return count
 
-# Find cpus, use them all; previously -1
-cpus = multiprocessing.cpu_count()
+# set number of cpus
+cpus = args.cpus
 cpus = str(cpus)
 
 # Open log file for usearch8 stderr redirect
@@ -106,7 +108,7 @@ print "Output: " + '{0:,}'.format(countfasta(filter_out)) + ' reads\n'
 
 # Run HMMer3 to filter contaminant sequences out.
 hmm_out = args.out + '.EE' + args.maxee + '.mhc.hmm.txt'
-hmm = script_path + '/lib/ursus_thibetanus_japonicus_dqb.hmm' 
+hmm = script_path + '/lib/' + args.hmm 
 FNULL = open(os.devnull, 'w')
 print "CMD: Running HMMER3 using MHC HMM model (using %s cpus)\nhmmscan --cpu %s --domtblout %s %s %s\n" % (cpus, cpus, hmm_out, hmm, filter_out)
 subprocess.call(['hmmscan', '--cpu', cpus, '--domtblout', hmm_out, hmm, filter_out], stdout = FNULL, stderr = FNULL)
