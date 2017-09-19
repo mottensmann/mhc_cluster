@@ -31,4 +31,13 @@ make
 make check
 ```
 
-
+* Biophyton (http://biopython.org/wiki/Download)
+```
+pip install biopython
+```
+ *Potential troubleshooting option: https://askubuntu.com/questions/677566/biopython-installation* 
+ 
+* natsort
+```
+pip install natsort
+```
