@@ -1,9 +1,19 @@
 #!/usr/bin/env python
 
-# Clustering Illumina MiSeq reads of MHC sequences into 'OTUs'
+# Clustering Illumina MiSeq reads of MHC sequences into 'OTUs' i.e. putative alleles
+# ===================================================================================
 #
-# This phyton scripts is used for preliminary filtering of sequences based on quality, then filters for target sequences
-# in comparison to hidden markov models of a query (i.e. MHC Locus reference) and finally clusters into distinct alleles.
+# This scripts does the following main steps:
+# 1.) Filterering reads based on expted error rates using vsearch
+# 2.) Removes reads reflecting contamination by mapping reads to a mhc reference (hmm model)
+# 3.) Trims/pads ends of all reads to average length (using defaults)
+# 4.) De-replication of reads
+# 5.) Sorts reads by frequency is descending order
+# 6.) Clusters reads into OTUs based on identity threshold
+# 7.) Maps reads back to OTUs
+# 8.) Creates OTU table
+# 9.) Translates OTUs to amino acid sequences 
+# 10.) Filters AAS against hidden markov model 
 #
 # Perequisites are:
 # 	A hidden markov model may be constructed based on a multiple sequence alignment and stored in the 
@@ -16,13 +26,11 @@
 #	Create help files
 #	hmmpress <hmmbuild output>
 #
-# Modified based on the script mhc-OTU_cluster.py from Palmer et al (2016). PeerJ PrePrints 4 (2016): e1662v1
+# Modified based on the script 'mhc-OTU_cluster.py':
+# Palmer et al (2016). PeerJ PrePrints 4 (2016): e1662v1
 # https://github.com/nextgenusfs/mhc_cluster
 # 
-# Changes include:
-# - substitute usearch parts by vsearch
-#
-# Meinolf Ottensmann, 31.08.2017
+# Meinolf Ottensmann, 2017
 
 import os, argparse, subprocess, inspect, re, multiprocessing, warnings, itertools
 from natsort import natsorted
@@ -39,21 +47,20 @@ class MyFormatter(argparse.ArgumentDefaultsHelpFormatter):
         super(MyFormatter,self).__init__(prog,max_help_position=50)
 
 parser=argparse.ArgumentParser(prog='mhc_clustering.py', usage="%(prog)s [options] -f file.demux.fq\n%(prog)s -h for help menu",
-    description='''Script processes mhc sequences.  This script runs quality filtering on the reads, filters the reads for contaminations using hidden markov models,
-	and then clusters into OTUs''',
+    description='''Clustering mhc sequences into OTUs based on hidden markov model references.''',
     epilog="""Meinolf Ottensmann (2017) https://github.com/mottensmann/mhc_cluster""",
     formatter_class=MyFormatter)
 
 parser.add_argument('-f','--fastq', dest="FASTQ", required=True, help='FASTQ file')
 parser.add_argument('-o','--out', default='out', help='Base output name')
 parser.add_argument('-e','--maxee', default='1.0', help='Quality trim EE value')
-# parser.add_argument('-t','--truncqual', default='3', help='Quality trim Q value')
 parser.add_argument('-l','--length', default='auto', help='Trim Length')
 parser.add_argument('-p','--pct_otu', default=99, help="OTU Clustering Percent")
 parser.add_argument('-n','--num_diff', default='False', help="OTU Clustering Number of differences")
 parser.add_argument('-m','--minsize', default='2', help='Min abundance to keep for clustering')
 parser.add_argument('-u','--usearch', dest="usearch", default='usearch8', help='USEARCH8 EXE')
 parser.add_argument('-hmm','--hmm', dest="hmm", default='urth_dqb.hmm', help='Hidden markov model reference')
+parser.add_argument('-hmm_aas','--hmm_aas', dest="hmm_aas", default='mhcII_beta_aas.hmm', help='Hidden markov model reference of amino acid sequences')
 parser.add_argument('-v','--vsearch', dest="vsearch", default='vsearch', help='VSEARCH')
 parser.add_argument('-c','--cpus', default=4, help='Number of cpus')
 parser.add_argument('--translate', action='store_true', help='Translate OTUs')
@@ -107,12 +114,6 @@ file.close()
 # Count input reads
 print '\nLoading records: ' + '{0:,}'.format(countfastq(args.FASTQ)) + ' reads'
     
-# Run vsearch fastq filtering step, output to fasta
-# filter_out = args.out + '.EE' + args.maxee + '.filter.fa'
-# print "\nCMD: Quality Filtering\n%s -fastq_filter %s -fastq_truncqual %s -fastaout %s" % (vsearch, args.FASTQ, args.truncqual, filter_out)
-# subprocess.call([vsearch, '-fastq_filter', args.FASTQ, '-fastq_truncqual', args.truncqual, '-fastaout', filter_out], stdout = log_file, stderr = log_file)
-# print "Output: " + '{0:,}'.format(countfasta(filter_out)) + ' reads\n'
-
 # Run vsearch fastq filtering step, output to fasta
 filter_out = args.out + '.EE' + args.maxee + '.filter.fa'
 print "\nCMD: Quality Filtering\n%s -fastq_filter %s -fastq_maxee %s -fastq_qmax 45 -fastaout %s" % (vsearch, args.FASTQ, args.maxee, filter_out)
@@ -270,7 +271,7 @@ file.write("\nCMD: Mapping Reads to OTUs\n%s -usearch_global %s -strand plus -id
 file.close()
 
 print "CMD: Mapping Reads to OTUs\n%s -usearch_global %s -strand plus -id %s -db %s -uc %s\n" % (usearch, pass_out, mapping_pct, fix_otus, uc_out)
-subprocess.call([usearch, '-usearch_global', pass_out, '-strand', 'plus', '-id', '0.97', '-db', fix_otus, '-uc', uc_out], stdout = log_file, stderr = log_file)
+subprocess.call([usearch, '-usearch_global', pass_out, '-strand', 'plus', '-id', mapping_pct, '-db', fix_otus, '-uc', uc_out], stdout = log_file, stderr = log_file)
 
 # Build OTU table
 otu_table = args.out + '.EE' + args.maxee + '.otu_table.txt'
@@ -301,7 +302,8 @@ if args.translate:
  
     #HMM against translated amino acids
     trans_hmm = args.out + '.EE' + args.maxee + '.proteins.hmm.txt'
-    hmm_prot = script_path + '/lib/MHC.hmm'
+    hmm_prot = script_path + '/lib/' + args.hmm_aas 
+	
     print "\nCMD: Running HMMER3 MHC HMM model (using %s cpus)\nhmmscan --cpu %s --tblout %s %s %s" % (cpus, cpus, trans_hmm, hmm_prot, trans_out)
     subprocess.call(['hmmscan', '--cpu', cpus, '--domtblout', trans_hmm, hmm_prot, trans_out], stdout = FNULL, stderr = FNULL)
     

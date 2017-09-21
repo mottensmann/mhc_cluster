@@ -8,11 +8,10 @@ mhc_clustering.py -h
 
 The subfolder `lib` contains required functions and may contain hidden marko models created from multiple sequence alignment of published mhc alleles using **HMMER3**.  
 
-
 *This repository was forked from https://github.com/nextgenusfs/mhc_cluster.git` and subsequently modified. See details there.*
 
-
 **Dependent software and installation**
+The installation of some of these may cause some trouble and requires different attempts depending on system and the rights of the user (*root* etc...)
 
 * USEARCH8 (http://www.drive5.com/usearch)
 * VSEARCH (https://github.com/torognes/vsearch)
