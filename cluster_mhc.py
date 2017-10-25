@@ -28,7 +28,7 @@
 # 
 # Meinolf Ottensmann, 2017
 
-import os, argparse, subprocess, inspect, re, multiprocessing, warnings, itertools
+import os, argparse, subprocess, inspect, re, multiprocessing, warnings, itertools, math
 from natsort import natsorted
 with warnings.catch_warnings():
     warnings.simplefilter('ignore')
@@ -42,24 +42,25 @@ class MyFormatter(argparse.ArgumentDefaultsHelpFormatter):
     def __init__(self,prog):
         super(MyFormatter,self).__init__(prog,max_help_position=50)
 
-parser=argparse.ArgumentParser(prog='mhc_clustering.py', usage="%(prog)s [options] -f file.demux.fq\n%(prog)s -h for help menu",
+parser=argparse.ArgumentParser(prog='cluster_mhc.py', usage="%(prog)s [options] -f file.demux.fq\n%(prog)s -h for help menu",
     description='''Clustering mhc sequences into OTUs based on hidden markov model references.''',
     epilog="""Meinolf Ottensmann (2017) https://github.com/mottensmann/mhc_cluster""",
     formatter_class=MyFormatter)
 
 parser.add_argument('-f','--fastq', dest="FASTQ", required=True, help='FASTQ input file')
 parser.add_argument('-o','--out', default='out', help='Path and name of the output')
-parser.add_argument('-e','--maxee', default='1.0', help='Expected error rate for filtering')
+parser.add_argument('-maxee','--maxee', default='1.0', help='Expected error rate for filtering')
 parser.add_argument('-l','--length', default='auto', help='Trim Length')
-parser.add_argument('-p1','--pct_otu', default='1', help="100 - Identity threshold for clustering [%]")
-parser.add_argument('-p2','--pct_mapping', default='0.97', help="Identity threshold for mapping reads to OTUs")
-parser.add_argument('-n','--num_diff', default='False', help="OTU Clustering Number of differences")
-parser.add_argument('-m','--minsize', default='2', help='Min abundance to keep for clustering')
-parser.add_argument('-u','--usearch', dest="usearch", default='usearch8', help='USEARCH8 EXE')
+parser.add_argument('-pct_otu','--pct_otu', default='1', help="Minimum differeces between OTUs")
+parser.add_argument('-pct_mapping','--pct_mapping', default='0.97', help="Identity threshold for mapping reads to OTUs")
+parser.add_argument('-num_diff','--num_diff', default='False', help="OTU Clustering Number of differences")
+parser.add_argument('-minsize','--minsize', default='2', help='Minimum abundance to keep for clustering')
+parser.add_argument('-minfreq','--minfreq', default='False', help='Minimum frequency to keep for clustering')
+parser.add_argument('-u','--usearch', dest="usearch", default='usearch8.exe', help='usearch version to use')
 parser.add_argument('-hmm','--hmm', dest="hmm", default='mammalia_dqb.hmm', help='Hidden markov model reference')
 parser.add_argument('-hmm_aas','--hmm_aas', dest="hmm_aas", default='mhcII_beta_aas.hmm', help='Hidden markov model reference of amino acid sequences')
 parser.add_argument('--run_hmm', action='store_true', help='Filter raw reads against Hidden markov model')
-parser.add_argument('-c','--cpus', default=4, help='Number of cpus')
+parser.add_argument('-cpus','--cpus', default=4, help='Number of cpus')
 parser.add_argument('--translate', action='store_true', help='Translate OTUs')
 args=parser.parse_args()
 
@@ -99,13 +100,18 @@ except OSError:
     os._exit(1)
 
 if args.num_diff != 'False':
-    print "\nWarning:  --num_diff %s was specified, this will override the --pct_otu option" % args.num_diff
+    print "\nWarning:  --num_diff = %s was specified, this will override the --pct_otu option" % args.num_diff
+	
+if args.minfreq != 'False':
+    print "\nWarning:  --minfreq = %s was specified, this will override the --minsize option" % args.minfreq
 
+	
 	
 # set up log file for prints to the console
 console_log = args.out + '.EE' + args.maxee + '.console_log.txt'
 
 file = open(console_log, "w")
+file.write('Arguments:\n' + str(args))
 file.write('\nLoading records: ' + '{0:,}'.format(countfastq(args.FASTQ)) + ' reads\n') 
 file.close() 
 
@@ -193,7 +199,7 @@ if args.run_hmm:
     
 # Run vsearch fastq filtering step, output to fasta
 filter_out = args.out + '.EE' + args.maxee + '.filter.fa'
-print "\nCMD: Quality Filtering\n%s -fastq_filter %s -fastq_maxee %s -fastq_qmax 45 -fastaout %s" % (usearch, args.FASTQ, args.maxee, args.FASTQ)
+print "\nCMD: Quality Filtering\n%s -fastq_filter %s -fastq_maxee %s -fastq_qmax 45 -fastaout %s" % (usearch, args.FASTQ, args.maxee, filter_out)
 
 file = open(console_log, "a")
 file.write("\nCMD: Quality Filtering\n%s -fastq_filter %s -fastq_maxee %s -fastq_qmax 45 -fastaout %s" % (usearch, args.FASTQ, args.maxee, filter_out)) 
@@ -288,15 +294,19 @@ file.write("\nCMD: De-replication\n%s -derep_fulllength %s -sizeout -fastaout %s
 file.close()
 
 print "CMD: De-replication\n%s -derep_fulllength %s -sizeout -fastaout %s" % (usearch, filter_out, derep_out)
-
 subprocess.call([usearch, '-derep_fulllength', filter_out, '-sizeout', '-fastaout', derep_out], stdout = log_file, stderr = log_file)
-subprocess.call([usearch, '-sortbysize', derep_out, '-minsize', args.minsize, '-fastaout', sort_out], stdout = log_file, stderr = log_file)
-
 print "Output: " + '{0:,}'.format(countfasta(derep_out)) + ' reads\n'
 
-file = open(console_log, "a")
-file.write("\nOutput: " + '{0:,}'.format(countfasta(derep_out)) + ' reads\n') 
-file.close()
+if args.minfreq != 'False':
+	number_of_reads = countfasta(derep_out)
+	cutoff = math.floor(number_of_reads/100*float(args.minfreq))
+	args.minsize = str(cutoff)
+	
+print "CMD: usearch -sortbysize -minsize %s"  % (args.minsize)
+
+subprocess.call([usearch, '-sortbysize', derep_out, '-minsize', args.minsize, '-fastaout', sort_out], stdout = log_file, stderr = log_file)
+
+print "Output: " + '{0:,}'.format(countfasta(sort_out)) + ' reads\n'
 
 # 4.) Cluster into OTUs
 # #####################
@@ -471,7 +481,7 @@ print ("HMM passed raw reads:	%s" % (raw_pass_out))
 print ("Filtered reads:	%s" % (filter_out))
 print ("HMM passed filtered reads:	%s" % (filtered_pass_out))
 print ("Dereplicated reads:	%s" % (derep_out))
-print ("Reads sorted by frequency:	%s" % (derep_out))
+print ("Reads sorted by frequency:	%s" % (sort_out))
 print ("Clustered OTUs:	%s" % (fix_otus))
 if args.translate:
     print ("Translated OTUs:	%s" % (pass_prot))
