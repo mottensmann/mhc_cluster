@@ -10,6 +10,13 @@ The expected input of this pipeline is a single _fastq_ file that may contain ba
 ```
 @MISEQ:279:000000000-AVVMJ:1:1101:14590:18831:N:0:barcodelabel=CAGAGAGGAAGGAGTA
 ```
+
+To use the script requires to download or clone the repository with
+
+```bash
+git clone https://github.com/mottensmann/mhc_cluster.git
+```
+
 For further information and a description of parameters invoke the helpfile:
 
 ```bash
