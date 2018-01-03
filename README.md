@@ -1,25 +1,25 @@
-**Clustering MHC class II sequences**
+`Clustering MHC class II sequences`
 
-*This repository was forked from https://github.com/nextgenusfs/mhc_cluster.git` and adapted for processing Fur seal MHC II sequences*
-
-The script `cluster_mhc2.py` allows to cluster high-quality Illumina reads into putative alleles using the [Unoise3](http://drive5.com/usearch/manual/cmd_unoise3.html) approach [(Edgar 2016)](https://www.biorxiv.org/content/early/2016/10/15/081257).
-Input sequences are `FASTQ` files generated on a Illumina MiSeq run. The following steps may be executed outside the clustering:
+_This repository was forked from https://github.com/nextgenusfs/mhc_cluster.git` and adapted for processing Fur seal MHC II sequences obtained from Illumina MiSeq reads_
 
 ### Using cluster_mhc2.py
 
-Input files are expected to be in `fastq` format containing the barcodes for individual samples within the header as shown below. Barcodes are required for demultiplexing reads prior to mapping reads to the generated list of alleles.
+The script **cluster_mhc2.py** allows to cluster high-quality Illumina reads into putative alleles using the [Unoise3](http://drive5.com/usearch/manual/cmd_unoise3.html) approach [(Edgar 2016)](https://www.biorxiv.org/content/early/2016/10/15/081257).
+The expected input of this pipeline is a single _fastq_ file that may contain barcodes for individual samples within the header as shown below. Barcodes are required for demultiplexing reads prior to mapping reads to the generated list of [`Zotus'](https://drive5.com/usearch/manual/pipe_otus.html), i.e. alleles.
 
 ```
 @MISEQ:279:000000000-AVVMJ:1:1101:14590:18831:N:0:barcodelabel=CAGAGAGGAAGGAGTA
 ```
-For further information and a description of parameters see the helpfile:
+For further information and a description of parameters invoke the helpfile:
 
 ```bash
 cluster_mhc2.py -h
 ```
 
-The subfolder `lib` contains required functions and may contain hidden Markov models created from multiple sequence alignment of previously characterised MHC genes using [HMMER3](http://hmmer.org/).   
-Example using [MUSCLE](http://www.drive5.com/muscle/manual/) and [HMMER3](hmmer.org):
+### Prerequisites
+
+The subfolder **lib** contains required functions and may contain hidden Markov models created from multiple sequence alignment of previously characterised MHC genes using [HMMER3](http://hmmer.org/).   
+Example using [MUSCLE](http://www.drive5.com/muscle/manual/) and [HMMER3](hmmer.org) to create these files:
 
 ```bash
 ##	Align sequences
