@@ -1,48 +1,50 @@
-**Clustering MHC class II sequences**
 
-*This repository was forked from https://github.com/nextgenusfs/mhc_cluster.git` and adapted for processing Fur seal MHC II sequences*
+`Clustering MHC class II alleles`
+=================================
 
-The script `cluster_mhc2.py` allows to cluster high-quality Illumina reads into putative alleles using the [Unoise3](http://drive5.com/usearch/manual/cmd_unoise3.html) approach [(Edgar 2016)](https://www.biorxiv.org/content/early/2016/10/15/081257).
-Input sequences are `FASTQ` files generated on a Illumina MiSeq run. The following steps may be executed outside the clustering:
+------------------------------------------------------------------------
 
-### Using cluster_mhc2.py
+*This repository was forked from <https://github.com/nextgenusfs/mhc_cluster.git>\` and adapted for processing Fur seal MHC II sequences*
+
+<img src="figures/Fig_6_clustering.png" width="317" style="display: block; margin: auto;" /> The script `cluster_mhc2.py` allows to cluster high-quality Illumina reads into putative alleles using the [Unoise3](http://drive5.com/usearch/manual/cmd_unoise3.html) approach [(Edgar 2016)](https://www.biorxiv.org/content/early/2016/10/15/081257). Input sequences are `FASTQ` files generated on a Illumina MiSeq run. The following steps must be executed outside the clustering:
+
+### Using cluster\_mhc2.py
 
 Input files are expected to be in `fastq` format containing the barcodes for individual samples within the header as shown below. Barcodes are required for demultiplexing reads prior to mapping reads to the generated list of alleles.
 
-```
-@MISEQ:279:000000000-AVVMJ:1:1101:14590:18831:N:0:barcodelabel=CAGAGAGGAAGGAGTA
-```
+    @MISEQ:279:000000000-AVVMJ:1:1101:14590:18831:N:0:barcodelabel=CAGAGAGGAAGGAGTA
+
 For further information and a description of parameters see the helpfile:
 
-```bash
+``` bash
 cluster_mhc2.py -h
 ```
 
-The subfolder `lib` contains required functions and may contain hidden Markov models created from multiple sequence alignment of previously characterised MHC genes using [HMMER3](http://hmmer.org/).   
+The subfolder `lib` contains required functions and may contain hidden Markov models created from multiple sequence alignment of previously characterised MHC genes using [HMMER3](http://hmmer.org/).
 Example using [MUSCLE](http://www.drive5.com/muscle/manual/) and [HMMER3](hmmer.org):
 
-```bash
-##	Align sequences
+``` bash
+##  Align sequences
 muscle -in input_sequences.fasta -out aligned_sequences.afa
-#	Create hidden markov model	
+#   Create hidden markov model  
 hmmbuild hmm aligned_sequences.afa
-#	Create auxiliary files
+#   Create auxiliary files
 hmmpress hmm
 ```
 
 ### Dependencies
 
-* [USEARCH10](http://www.drive5.com/usearch)
-* [VSEARCH](https://github.com/torognes/vsearch)
+-   [USEARCH10](http://www.drive5.com/usearch)
+-   [VSEARCH](https://github.com/torognes/vsearch)
 
-```bash
+``` bash
 wget https://github.com/torognes/vsearch/releases/download/v2.4.4/vsearch-2.4.4-linux-x86_64.tar.gz
 tar xzf vsearch-2.4.4-linux-x86_64.tar.gz
 ```
 
-* [HMMER3 v3.1b2](hmmer.org)
+-   [HMMER3 v3.1b2](hmmer.org)
 
-```bash
+``` bash
 tar zxf hmmer-3.1b2.tar.gz
 cd hmmer-3.1b2
 ./configure
@@ -50,16 +52,17 @@ make
 make check
 ```
 
-* [Biophyton](http://biopython.org/wiki/Download)
+-   [Biophyton](http://biopython.org/wiki/Download)
 
-```bash
+``` bash
 pip install biopython
 ```
-*Installing Biophyton can easily cause some problems. See troubleshooting options here: https://askubuntu.com/questions/677566/biopython-installation* 
- 
-* [natsort](https://pypi.python.org/pypi/natsort)
 
-```bash
+\*Installing Biophyton can easily cause some problems. See troubleshooting options here: <https://askubuntu.com/questions/677566/biopython-installation*>
+
+-   [natsort](https://pypi.python.org/pypi/natsort)
+
+``` bash
 pip install natsort
 ```
 
