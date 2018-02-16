@@ -54,7 +54,7 @@ parser.add_argument('-u','--usearch', dest="usearch", default='usearch10.exe', h
 parser.add_argument('-alpha', '--alpha', default = '2.0', help='unoise3 alpha parameter')
 parser.add_argument('-e', '--error', default = '1.0', help='Expected error used to filter reads for clustering') 
 parser.add_argument('-hmm','--hmm', dest="hmm", default='seal_dqb.hmm', help='Hidden markov model reference')
-parser.add_argument('-cpus','--cpus', default=1, help='Number of cpus to use')
+parser.add_argument('-cpus','--cpus', default=4, help='Number of cpus to use')
 args=parser.parse_args()
 
 # make proper output name
