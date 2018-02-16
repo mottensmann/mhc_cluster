@@ -20,6 +20,7 @@ knitr::opts_chunk$set(
 ```{r, fig.align='center', fig.width=2, echo=FALSE}
 knitr::include_graphics(path = "figures/Fig_6_clustering.png", dpi = 300)
 ```
+
 The script `cluster_mhc2.py` allows to cluster high-quality Illumina reads into putative alleles using the [Unoise3](http://drive5.com/usearch/manual/cmd_unoise3.html) approach [(Edgar 2016)](https://www.biorxiv.org/content/early/2016/10/15/081257).
 Input sequences are `FASTQ` files generated on a Illumina MiSeq run. The following steps must be executed outside the clustering:
 

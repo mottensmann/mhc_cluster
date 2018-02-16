@@ -6,7 +6,9 @@
 
 *This repository was forked from <https://github.com/nextgenusfs/mhc_cluster.git>\` and adapted for processing Fur seal MHC II sequences*
 
-<img src="figures/Fig_6_clustering.png" width="317" style="display: block; margin: auto;" /> The script `cluster_mhc2.py` allows to cluster high-quality Illumina reads into putative alleles using the [Unoise3](http://drive5.com/usearch/manual/cmd_unoise3.html) approach [(Edgar 2016)](https://www.biorxiv.org/content/early/2016/10/15/081257). Input sequences are `FASTQ` files generated on a Illumina MiSeq run. The following steps must be executed outside the clustering:
+<img src="figures/Fig_6_clustering.png" width="317" style="display: block; margin: auto;" />
+
+The script `cluster_mhc2.py` allows to cluster high-quality Illumina reads into putative alleles using the [Unoise3](http://drive5.com/usearch/manual/cmd_unoise3.html) approach [(Edgar 2016)](https://www.biorxiv.org/content/early/2016/10/15/081257). Input sequences are `FASTQ` files generated on a Illumina MiSeq run. The following steps must be executed outside the clustering:
 
 ### Using cluster\_mhc2.py
 
