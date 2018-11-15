@@ -28,7 +28,7 @@ parser.add_argument('-f','--fastq', dest="FASTQ", required=True, help='FASTQ inp
 parser.add_argument('-o','--out', default='out', help='Path and prefix of the output')
 parser.add_argument('-ref','--reference', required=True, help='Reference list of otus')
 parser.add_argument('-pct','--pct_mapping', default='1.0', help="Identity threshold for mapping reads to OTUs")
-parser.add_argument('-u','--usearch', dest="usearch", default='usearch8.exe', help='usearch version to use')
+parser.add_argument('-u','--usearch', dest="usearch", default='usearch10.exe', help='usearch version to use')
 parser.add_argument('-cpus','--cpus', default=4, help='Number of cpus')
 args=parser.parse_args()
 
