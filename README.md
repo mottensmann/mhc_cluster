@@ -20,6 +20,7 @@ For further information and a description of parameters see the helpfile:
 
 ``` bash
 cluster_mhc2.py -h
+cluster_mhc3.py -h 
 ```
 
 The subfolder `lib` contains required functions and may contain hidden Markov models created from multiple sequence alignment of previously characterised MHC genes using [HMMER3](http://hmmer.org/).
@@ -40,8 +41,13 @@ hmmpress hmm
 -   [VSEARCH](https://github.com/torognes/vsearch)
 
 ``` bash
-wget https://github.com/torognes/vsearch/releases/download/v2.4.4/vsearch-2.4.4-linux-x86_64.tar.gz
-tar xzf vsearch-2.4.4-linux-x86_64.tar.gz
+wget https://github.com/torognes/vsearch/archive/v2.9.1.tar.gz
+tar xzf v2.9.1.tar.gz
+cd vsearch-2.9.1
+./autogen.sh
+./configure
+make
+make install  # as root or sudo make install
 ```
 
 -   [HMMER3 v3.1b2](hmmer.org)

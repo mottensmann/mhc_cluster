@@ -41,7 +41,7 @@ class MyFormatter(argparse.ArgumentDefaultsHelpFormatter):
 
 parser=argparse.ArgumentParser(prog='cluster_mhc2.py', usage="%(prog)s [options] -f file.demux.fq\n%(prog)s -h for help menu",
     description='''Processing Illumina MiSeq reads of MHC II loci.''',
-    epilog="""Meinolf Ottensmann (2017) https://github.com/mottensmann/mhc_cluster""",
+    epilog="""Meinolf Ottensmann (2017-2018) https://github.com/mottensmann/mhc_cluster""",
     formatter_class=MyFormatter)
 
 parser.add_argument('-f','--fastq', dest="FASTQ", required=True, help='FASTQ input file')
@@ -51,6 +51,7 @@ parser.add_argument('-pct','--pct_mapping', default='1.0', help="Identity thresh
 parser.add_argument('-minsize','--minsize', default='10', help='Minimum abundance to keep for clustering')
 parser.add_argument('-minfreq','--minfreq', default='False', help='Minimum frequency to keep for clustering')
 parser.add_argument('-u','--usearch', dest="usearch", default='usearch10.exe', help='usearch version to use')
+parser.add_argument('-v','--vsearch', dest="vsearch", default='vsearch', help='usearch version to use')
 parser.add_argument('-alpha', '--alpha', default = '2.0', help='unoise3 alpha parameter')
 parser.add_argument('-e', '--error', default = '1.0', help='Expected error used to filter reads for clustering') 
 parser.add_argument('-hmm','--hmm', dest="hmm", default='seal_dqb.hmm', help='Hidden markov model reference')
@@ -88,11 +89,12 @@ if os.path.isfile(log_name):
 log_file = open(log_name, 'ab')
 
 usearch = args.usearch
+vsearch = args.vsearch
 
 try:
-    subprocess.call([usearch, '--version'], stdout = log_file, stderr = log_file)
+    subprocess.call([vsearch, '--version'], stdout = log_file, stderr = log_file)
 except OSError:
-    print "%s not found in your PATH, exiting." % usearch 
+    print "%s not found in your PATH, exiting." % vsearch
     os._exit(1)
 
 if args.minfreq != 'False':
@@ -112,7 +114,7 @@ print '\nLoading records: ' + '{0:,}'.format(countfastq(args.FASTQ)) + ' reads'
 # Convert to fasta to use HMMER3
 
 raw_reads_fasta = args.out + '.raw_reads.fa'
-subprocess.call([usearch, '-fastq_filter', args.FASTQ, '-fastq_qmax', '45', '-fastaout', raw_reads_fasta], stdout = log_file, stderr = log_file)
+subprocess.call([vsearch, '-fastq_filter', args.FASTQ, '-fastaout', raw_reads_fasta], stdout = log_file, stderr = log_file)
 
 # to capture some output
 FNULL = open(os.devnull, 'w')
@@ -123,13 +125,13 @@ FNULL = open(os.devnull, 'w')
     
 # Run vsearch fastq filtering step, output to fasta
 filter_out = args.out + '.filter.fa'
-print "\nCMD: Quality Filtering\n%s -fastq_filter %s -fastq_maxee %s -fastq_qmax 45 -fastaout %s" % (usearch, args.FASTQ, args.error, filter_out)
+print "\nCMD: Quality Filtering\n%s -fastq_filter %s -fastq_maxee %s -fastq_qmax 45 -fastaout %s" % (vsearch, args.FASTQ, args.error, filter_out)
 
 file = open(console_log, "a")
-file.write("\nCMD: Quality Filtering\n%s -fastq_filter %s -fastq_maxee %s -fastq_qmax 45 -fastaout %s" % (usearch, args.FASTQ, args.error, filter_out)) 
+file.write("\nCMD: Quality Filtering\n%s -fastq_filter %s -fastq_maxee %s -fastq_qmax 45 -fastaout %s" % (vsearch, args.FASTQ, args.error, filter_out))
 file.close() 
 
-subprocess.call([usearch, '-fastq_filter', args.FASTQ, '-fastq_maxee', args.error, '-fastq_qmax', '45', '-fastaout', filter_out], stdout = log_file, stderr = log_file)
+subprocess.call([vsearch, '-fastq_filter', args.FASTQ, '-fastq_maxee', args.error, '-fastq_qmax', '45', '-fastaout', filter_out], stdout = log_file, stderr = log_file)
 
 print "Output: " + '{0:,}'.format(countfasta(filter_out)) + ' reads\n'
 
@@ -143,11 +145,12 @@ file.close()
 derep_out = args.out + '.derep.fa'
 
 file = open(console_log, "a")
-file.write("\nCMD: De-replication\n%s --fastx_uniques %s -sizeout -fastaout %s -minuniquesize 1" % (usearch, filter_out, derep_out)) 
+file.write("\nCMD: De-replication\n%s --fastx_uniques %s -sizeout -fastaout %s -minuniquesize 1" % (vsearch, filter_out, derep_out))
 file.close()
 
-print "CMD: De-replication\n%s --fastx_uniques %s -sizeout -fastaout %s" % (usearch, filter_out, derep_out)
-subprocess.call([usearch, '--fastx_uniques', filter_out, '-sizeout', '-fastaout', derep_out, '-minuniquesize', '1'], stdout = log_file, stderr = log_file)
+print "CMD: De-replication\n%s --fastx_uniques %s -sizeout -fastaout %s" % (vsearch, filter_out, derep_out)
+subprocess.call([vsearch, '--derep_fulllength', filter_out, '-output', derep_out, '-minuniquesize', '1', '--sizeout'], stdout = log_file, stderr = log_file)
+
 print "Output: " + '{0:,}'.format(countfasta(derep_out)) + ' reads\n'
 
 # 3.) Filter against hidden markov model
@@ -261,8 +264,11 @@ file = open(console_log, "a")
 file.write("\nCMD: Mapping Reads to OTUs\n%s -otutab %s -strand plus -otutabout %s -mapout %s\n" % (usearch, raw_reads_fasta, otu_table, uc_out)) 
 file.close()
 
-print "CMD: Mapping Reads to OTUs\n%s -usearch_global %s -strand plus -id %s -db %s -uc %s\n" % (usearch, raw_reads_fasta, args.pct_mapping, fix_otus, uc_out)
-subprocess.call([usearch, '-usearch_global', raw_reads_fasta, '-strand', 'plus', '-id', args.pct_mapping, '-db', fix_otus, '-uc', uc_out], stdout = log_file, stderr = log_file)
+#print "CMD: Mapping Reads to OTUs\n%s -usearch_global %s -strand plus -id %s -db %s -uc %s\n" % (usearch, raw_reads_fasta, args.pct_mapping, fix_otus, uc_out)
+# subprocess.call([usearch, '-usearch_global', raw_reads_fasta, '-strand', 'plus', '-id', args.pct_mapping, '-db', fix_otus, '-uc', uc_out], stdout = log_file, stderr = log_file)
+print "CMD: Mapping Reads to OTUs\n%s -usearch_global %s -strand plus -id %s -db %s -alnout %s\n" % (vsearch, raw_reads_fasta, args.pct_mapping, fix_otus, uc_out)
+subprocess.call([vsearch, '-usearch_global', raw_reads_fasta, '-id', args.pct_mapping, '-db', fix_otus, '-uc', uc_out], stdout = log_file, stderr = log_file)
+
 
 # 7.) Build OTU table
 # ###########################
