@@ -41,7 +41,7 @@ class MyFormatter(argparse.ArgumentDefaultsHelpFormatter):
 
 parser=argparse.ArgumentParser(prog='cluster_mhc2.py', usage="%(prog)s [options] -f file.demux.fq\n%(prog)s -h for help menu",
     description='''Processing Illumina MiSeq reads of MHC II loci.''',
-    epilog="""Meinolf Ottensmann (2017) https://github.com/mottensmann/mhc_cluster""",
+    epilog="""Meinolf Ottensmann (2017-2018) https://github.com/mottensmann/mhc_cluster""",
     formatter_class=MyFormatter)
 
 parser.add_argument('-f','--fastq', dest="FASTQ", required=True, help='FASTQ input file')
