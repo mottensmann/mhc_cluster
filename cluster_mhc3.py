@@ -39,7 +39,7 @@ class MyFormatter(argparse.ArgumentDefaultsHelpFormatter):
     def __init__(self,prog):
         super(MyFormatter,self).__init__(prog,max_help_position=50)
 
-parser=argparse.ArgumentParser(prog='cluster_mhc2.py', usage="%(prog)s [options] -f file.demux.fq\n%(prog)s -h for help menu",
+parser=argparse.ArgumentParser(prog='cluster_mhc3.py', usage="%(prog)s [options] -f file.demux.fq\n%(prog)s -h for help menu",
     description='''Processing Illumina MiSeq reads of MHC II loci.''',
     epilog="""Meinolf Ottensmann (2017-2018) https://github.com/mottensmann/mhc_cluster""",
     formatter_class=MyFormatter)
@@ -51,11 +51,12 @@ parser.add_argument('-pct','--pct_mapping', default='1.0', help="Identity thresh
 parser.add_argument('-minsize','--minsize', default='10', help='Minimum abundance to keep for clustering')
 parser.add_argument('-minfreq','--minfreq', default='False', help='Minimum frequency to keep for clustering')
 parser.add_argument('-u','--usearch', dest="usearch", default='usearch10.exe', help='usearch version to use')
-parser.add_argument('-v','--vsearch', dest="vsearch", default='vsearch', help='usearch version to use')
+parser.add_argument('-v','--vsearch', dest="vsearch", default='vsearch', help='vsearch version to use')
 parser.add_argument('-alpha', '--alpha', default = '2.0', help='unoise3 alpha parameter')
 parser.add_argument('-e', '--error', default = '1.0', help='Expected error used to filter reads for clustering') 
 parser.add_argument('-hmm','--hmm', dest="hmm", default='seal_dqb.hmm', help='Hidden markov model reference')
 parser.add_argument('-cpus','--cpus', default=4, help='Number of cpus to use')
+parser.add_argument('-use_raw','--use_raw', default=True, help='Use raw reads irrespective of quality')
 args=parser.parse_args()
 
 # make proper output name
@@ -208,6 +209,23 @@ for rec in filtered:
 pass_handle.close()
 
 
+# 3II.) Chimera filter
+# ###########################
+
+chimera_out = args.out + '.chimera_out.fa'
+print 'De novo chimera detection'
+
+subprocess.call([vsearch, '-uchime_denovo', pass_out, '-sizein', '-sizeout', '-fasta_width', '0', '-nonchimeras', chimera_out], stdout = log_file, stderr = log_file)
+
+filtered = open(chimera_out, 'rb')
+seq_count = 0
+for rec in SeqIO.parse(filtered, "fasta"):
+    seq_count += 1
+    Seq = re.sub('[^GATC]', "", str(rec.seq).upper())
+filtered.close()
+
+print "%10u sequences retained\n" % seq_count
+
 # 4.) Cluster into OTUs
 # #####################
 
@@ -215,18 +233,17 @@ otu_out = args.out + '.otus.fa'
 otu_sizes = args.out + '.otus_size.fa'
 
 file = open(console_log, "a")
-file.write("\nCMD: Clustering OTUs\n%s -'-unoise3' %s -sizein -sizeout -otus %s -unoise_alpha %s -minsize %s" % (usearch, pass_out, otu_out, args.alpha, args.minsize)) 
+file.write("\nCMD: Clustering OTUs\n%s -'-unoise3' %s -sizein -sizeout -otus %s -unoise_alpha %s -minsize %s" % (usearch, chimera_out, otu_out, args.alpha, args.minsize)) 
 file.close()
 
 if args.minfreq != 'False':
-	number_of_reads = countfasta(pass_out)
+	number_of_reads = countfasta(chimera_out)
 	cutoff = math.floor(number_of_reads/100*float(args.minfreq))
 	args.minsize = str(cutoff)
 	print "minfreq %s equls minsize %s" %(args.minfreq, args.minsize)
 
-
-print "CMD: Clustering OTUs\n%s -'-unoise3' %s -sizein -sizeout -otus %s -unoise_alpha %s -minsize %s" % (usearch, pass_out, otu_out, args.alpha, args.minsize)
-subprocess.call([usearch, '-unoise3', pass_out, '-zotus', otu_out, '-unoise_alpha', args.alpha,'-minsize', args.minsize, ], stdout = log_file, stderr = log_file)
+print "CMD: Clustering OTUs\n%s -'-unoise3' %s -sizein -sizeout -otus %s -unoise_alpha %s -minsize %s" % (usearch, chimera_out, otu_out, args.alpha, args.minsize)
+subprocess.call([usearch, '-unoise3', chimera_out, '-zotus', otu_out, '-unoise_alpha', args.alpha,'-minsize', args.minsize, ], stdout = log_file, stderr = log_file)
 
 # Fix OTUs, remove trailing N's
 fix_otus = args.out + '.fixed.otus.fa'
@@ -249,25 +266,28 @@ print "%10u total OTUs\n" % otu_count
 # 5.) Add size annotation to OTUs
 # ###############################
 
-subprocess.call([usearch, '-otutab', derep_out_hmm, '-db', otu_out, '-dbmatched', otu_sizes,'-sizeout'], stdout = log_file, stderr = log_file)
-
-#-otutabout otutab.txt 
-
+# subprocess.call([usearch, '-otutab', derep_out_hmm, '-db', otu_out, '-dbmatched', otu_sizes,'-sizeout'], stdout = log_file, stderr = log_file)
 
 # 6.) Map reads back to OTUs
 # ###########################
 
+## replaced fix_otus by nonchimeras_otus, 2019-02-15
+
 uc_out = args.out + '.mapping.uc'
 otu_table = args.out + '.otu_table.txt'
 
-file = open(console_log, "a")
-file.write("\nCMD: Mapping Reads to OTUs\n%s -otutab %s -strand plus -otutabout %s -mapout %s\n" % (usearch, raw_reads_fasta, otu_table, uc_out)) 
-file.close()
-
-#print "CMD: Mapping Reads to OTUs\n%s -usearch_global %s -strand plus -id %s -db %s -uc %s\n" % (usearch, raw_reads_fasta, args.pct_mapping, fix_otus, uc_out)
-# subprocess.call([usearch, '-usearch_global', raw_reads_fasta, '-strand', 'plus', '-id', args.pct_mapping, '-db', fix_otus, '-uc', uc_out], stdout = log_file, stderr = log_file)
-print "CMD: Mapping Reads to OTUs\n%s -usearch_global %s -strand plus -id %s -db %s -alnout %s\n" % (vsearch, raw_reads_fasta, args.pct_mapping, fix_otus, uc_out)
-subprocess.call([vsearch, '-usearch_global', raw_reads_fasta, '-id', args.pct_mapping, '-db', fix_otus, '-uc', uc_out], stdout = log_file, stderr = log_file)
+if args.use_raw == True:
+  file = open(console_log, "a")
+  file.write("\nCMD: Mapping raw reads to OTUs\n%s -otutab %s -strand plus -otutabout %s -mapout %s\n" % (usearch, raw_reads_fasta, otu_table, uc_out)) 
+  file.close()
+  print "CMD: Mapping Reads to OTUs\n%s -usearch_global %s -strand plus -id %s -db %s -alnout %s\n" % (vsearch, raw_reads_fasta, args.pct_mapping, fix_otus, uc_out)
+  subprocess.call([vsearch, '-usearch_global', raw_reads_fasta, '-id', args.pct_mapping, '-db', fix_otus, '-uc', uc_out], stdout = log_file, stderr = log_file)
+else:
+  file = open(console_log, "a")
+  file.write("\nCMD: Mapping filtered reads to OTUs\n%s -otutab %s -strand plus -otutabout %s -mapout %s\n" % (usearch, filter_out, otu_table, uc_out)) 
+  file.close()
+  print "CMD: Mapping Reads to OTUs\n%s -usearch_global %s -strand plus -id %s -db %s -alnout %s\n" % (vsearch, filter_out, args.pct_mapping, fix_otus, uc_out)
+  subprocess.call([vsearch, '-usearch_global', filter_out, '-id', args.pct_mapping, '-db', fix_otus, '-uc', uc_out], stdout = log_file, stderr = log_file)
 
 
 # 7.) Build OTU table
@@ -324,6 +344,7 @@ print ("Input fasta format:	%s" % (raw_reads_fasta))
 print ("Filtered reads:	%s" % (filter_out))
 print ("Dereplicated reads:	%s" % (derep_out))
 print ("Dereplicated & hmm filtered:	%s" % (pass_out))
+print ("Chimera filtered out:	%s" % (chimera_out))
 print ("Clustered OTUs:	%s" % (fix_otus))
 print ("usearch Mapping file:	%s" % (uc_out))
 print ("OTU Table:	%s" % (otu_table))
